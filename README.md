@@ -13,8 +13,6 @@ cat flag*
 ;*3$"
  ```
 
-checksec tells us a lot about the binary, especially security settings. No canary means buffer overflow likely possible and no PIE hints at a vulnerable binary.  PIE binarys (Position Independent Executable) are loaded into random locations within virtual memory each time the application is executed. This makes Return Oriented Programming (ROP) attacks much more difficult to execute reliably. 
-
 ` checksec --file=sp_going_deeper `
 ```                                                                                                                        
 ┌──(root💀kali)-[~/Downloads/CTF/challenge]
@@ -23,6 +21,8 @@ checksec tells us a lot about the binary, especially security settings. No canar
 RELRO           STACK CANARY      NX            PIE             RPATH      RUNPATH	Symbols		FORTIFY	Fortified	Fortifiable	FILE
 Full RELRO      No canary found   NX enabled    No PIE          No RPATH   RW-RUNPATH   77) Symbols	  No	0		2	sp_going_deeper
 ```
+
+`checksec` tells us a lot about the binary, especially security settings. No canary means buffer overflow likely possible and no PIE hints at a vulnerable binary.  PIE binarys (Position Independent Executable) are loaded into random locations within virtual memory each time the application is executed. This makes Return Oriented Programming (ROP) attacks much more difficult to execute reliably. 
 
 
 Let's run the program.  Inputing a string of A's reveals it is vuln to a buffer overflow. Note the segmentation fault at the end:
@@ -183,7 +183,7 @@ Let's use `r2` to get the address we need to point our payload to:
 0x00400b47    1 84           main
 --------------snip-------------------
  ```
-The `aaaa` command does a full analysis and the `afl` lists all functions. Let's look deeper at `main`
+The `aaaa` command does a full analysis, `afl` lists all functions. `pdf` (Print disassembly of function) gives even more detail. Let's look deeper at `main`
 
 
 [0x004007a0]> `pdf@main`
