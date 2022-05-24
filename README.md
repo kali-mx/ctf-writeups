@@ -6,7 +6,7 @@ Let's use strings to examine the binary. The interesting bit is below, alluding 
 
 `strings sp_going_deeper`
 
-```bash DRAEGER15th30n34nd0nly4dm1n15tr4t0R0fth15sp4c3cr4ft
+```python3 DRAEGER15th30n34nd0nly4dm1n15tr4t0R0fth15sp4c3cr4ft
 %s[+] Welcome admin! The secret message is: 
 cat flag*
 %s[-] Authentication failed!
@@ -16,7 +16,7 @@ cat flag*
 
 `checksec --file=sp_going_deeper`
 
-```bash
+```ruby
 
 ┌──(root💀kali)-[~/Downloads/CTF/challenge]
 └─#  checksec --file=sp_going_deeper     
