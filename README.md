@@ -249,8 +249,8 @@ The sym.admin_panel looks interesting- let's go deeper:
 
 This section is the juicy part.  It tells us the exact location address `0x00400b12` to point our payload.  If we can get the program to crash right here, it should execute the `cat flag*` command and output the flag file.
 
-Using our BO offset of 85 bytes and the address of our cat command, putting it in Endian format, we construct the following payload2.
-A quick note on Endian format. Take the address `0x00400b12`. Strip the last 3 hex numbers from it, then place them in reverse order, inserting '\x' before each one:
+Using our BO offset of 85 bytes and the address of our cat command, putting it in Little-Endian format, we construct the following payload2.
+A quick note on Little-Endian format. Take the address `0x00400b12`. Strip the last 3 hex numbers from it, then place them in reverse order, inserting '\x' before each one:
 
 `echo -en "1\n$(cyclic 85)\x12\x0B\x40" > payload2`
 
